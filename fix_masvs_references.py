@@ -1,10 +1,24 @@
 #!/usr/bin/env python3
 
+"""
+The OWASP MSTG contains references to the OWASP MASVS. This script updates
+those references.
+
+This script searches for MASVS references in the MSTG documents, extracts the
+numbers from those references and updates the text in the MSTG document to
+match the text in the MASVS requirements.
+
+Sjoerd Langkemper, 2017
+CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/
+"""
+
+
 import os
 import os.path
 
 
 class WorkingDirectory:
+    """Temporarily change working directory."""
     def __init__(self, path):
         self.original_path = os.getcwd()
         self.destination_path = path
@@ -17,6 +31,7 @@ class WorkingDirectory:
 
 
 class MasvsLine:
+    """A MASVS reference from a MSTG document."""
     pass
 
 
@@ -58,7 +73,7 @@ def parse_masvs_line(line):
     return m
 
 
-def find_masvs_in_document(doc_path, masvs_reqs):
+def fix_masvs_in_document(doc_path, masvs_reqs):
     in_masvs = False
     line_number = 0
     out_path = doc_path + ".tmp"
@@ -72,13 +87,10 @@ def find_masvs_in_document(doc_path, masvs_reqs):
                 elif line.startswith("####"):
                     in_masvs = False
                 elif in_masvs and line.strip():
-                    try:
-                        req = parse_masvs_line(line)
-                        req.line_number = line_number
-                        req.document_path = doc_path
-                        line = fix_requirement_line(masvs_reqs, req)
-                    except ValueError as e:
-                        print(e)
+                    req = parse_masvs_line(line)
+                    req.line_number = line_number
+                    req.document_path = doc_path
+                    line = fix_requirement_line(masvs_reqs, req)
 
                 out.write(line)
     os.rename(out_path, doc_path)
@@ -97,4 +109,4 @@ if __name__ == "__main__":
     arguments = parse_arguments()
     masvs_reqs = parse_masvs_rules(arguments.masvs_path)
     for doc_path in find_document_files(arguments.mstg_path):
-        find_masvs_in_document(doc_path, masvs_reqs)
+        fix_masvs_in_document(doc_path, masvs_reqs)
