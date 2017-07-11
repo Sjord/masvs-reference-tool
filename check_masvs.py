@@ -59,56 +59,46 @@ def parse_masvs_line(line):
     return m
 
 
-def find_masvs_in_document(doc_path):
+def find_masvs_in_document(doc_path, masvs_reqs):
     in_masvs = False
     line_number = 0;
     found_lines = []
-    with open(doc_path, "r") as fp:
-        for line in fp:
-            line = line.rstrip()
-            line_number += 1
+    out_path = doc_path + ".tmp"
+    with open(out_path, "w", newline="\n") as out:
+        with open(doc_path, "r", newline="\n") as fp:
+            for line in fp:
+                line_number += 1
 
-            if line.startswith("##### OWASP MASVS"):
-                in_masvs = True
-            elif line.startswith("####"):
-                in_masvs = False
-            elif in_masvs and line:
-                line = parse_masvs_line(line)
-                line.line_number = line_number
-                line.document_path = doc_path
-                found_lines.append(line)
-    return found_lines
+                if line.startswith("##### OWASP MASVS"):
+                    in_masvs = True
+                elif line.startswith("####"):
+                    in_masvs = False
+                elif in_masvs and line.strip():
+                    try:
+                        req = parse_masvs_line(line)
+                        req.line_number = line_number
+                        req.document_path = doc_path
+                        line = fix_requirement_line(masvs_reqs, req)
+                    except ValueError as e:
+                        print(e)
+
+                out.write(line)
+    os.rename(out_path, doc_path)
 
 
 def find_masvs_requirement(masvs_reqs, doc_req):
     return [m for m in masvs_reqs if m["id"] == doc_req.id][0]
 
 
-def check_masvs(masvs_reqs, doc_reqs):
-    from fuzzywuzzy import fuzz
+def fix_requirement_line(masvs_reqs, doc_req):
+    document = os.path.basename(doc_req.document_path)
 
-    for doc_req in doc_reqs:
-        document = os.path.basename(doc_req.document_path)
-        try:
-            masvs_req = find_masvs_requirement(masvs_reqs, doc_req)
-        except:
-            # print("MASVS requirement %s not found in %s line %d" % (doc_req.id, document, doc_req.line_number))
-            print("- [ ] MASVS V%s in [%s](%s) line %d" % (doc_req.id, document, doc_link, doc_req.line_number))
-
-        if fuzz.ratio(masvs_req["text"], doc_req.text) < 80:
-            # print("Requirements text mismatch in %s line %d:" % (document, doc_req.line_number))
-            # print("    MASVS: %s" % masvs_req["text"])
-            # print("    Doc.:  %s" % doc_req.text)
-            masvs_link = "https://github.com/OWASP/owasp-masvs/blob/master/Document/%s" % masvs_req['document']
-            doc_link = "https://github.com/OWASP/owasp-mstg/blob/master/Document/%s#owasp-masvs" % document
-            print("- [ ] [MASVS V%s](%s) in [%s](%s) line %d" % (doc_req.id, masvs_link, document, doc_link, doc_req.line_number))
-            
+    masvs_req = find_masvs_requirement(masvs_reqs, doc_req)
+    return '- V%s: "%s"\n' % (masvs_req["id"], masvs_req["text"].strip())
+        
 
 if __name__ == "__main__":
     arguments = parse_arguments()
     masvs_reqs = parse_masvs_rules(arguments.masvs_path)
     for doc_path in find_document_files(arguments.mstg_path):
-        doc_masvs = find_masvs_in_document(doc_path)
-        check_masvs(masvs_reqs, doc_masvs)
-    
-
+        find_masvs_in_document(doc_path, masvs_reqs)
