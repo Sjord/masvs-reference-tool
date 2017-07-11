@@ -11,14 +11,13 @@ class WorkingDirectory:
 
     def __enter__(self):
         os.chdir(self.destination_path)
-        
+
     def __exit__(self, type, value, traceback):
         os.chdir(self.original_path)
 
 
 class MasvsLine:
     pass
-        
 
 
 def parse_arguments():
@@ -61,8 +60,7 @@ def parse_masvs_line(line):
 
 def find_masvs_in_document(doc_path, masvs_reqs):
     in_masvs = False
-    line_number = 0;
-    found_lines = []
+    line_number = 0
     out_path = doc_path + ".tmp"
     with open(out_path, "w", newline="\n") as out:
         with open(doc_path, "r", newline="\n") as fp:
@@ -91,11 +89,9 @@ def find_masvs_requirement(masvs_reqs, doc_req):
 
 
 def fix_requirement_line(masvs_reqs, doc_req):
-    document = os.path.basename(doc_req.document_path)
-
     masvs_req = find_masvs_requirement(masvs_reqs, doc_req)
     return '- V%s: "%s"\n' % (masvs_req["id"], masvs_req["text"].strip())
-        
+
 
 if __name__ == "__main__":
     arguments = parse_arguments()
