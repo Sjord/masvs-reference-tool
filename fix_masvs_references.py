@@ -53,8 +53,11 @@ def load_module(module_name, module_path):
 
 def parse_masvs_rules(masvs_path):
     with WorkingDirectory(masvs_path):
-        masvs_mod = load_module("masvs", "./masvs.py")
-        return masvs_mod.MASVS().requirements
+        try:
+            masvs_mod = load_module("masvs", "./masvs.py")
+            return masvs_mod.MASVS().requirements
+        except FileNotFoundError:
+            raise FileNotFoundError("Could not find masvs.py in '%s'. Please specify the correct path to the OWASP MASVS repo." % masvs_path)
 
 
 def find_document_files(mstg_path):
@@ -108,5 +111,8 @@ def fix_requirement_line(masvs_reqs, doc_req):
 if __name__ == "__main__":
     arguments = parse_arguments()
     masvs_reqs = parse_masvs_rules(arguments.masvs_path)
-    for doc_path in find_document_files(arguments.mstg_path):
+    doc_paths = find_document_files(arguments.mstg_path)
+    if not doc_paths:
+        raise FileNotFoundError("Could not find any MSTG document. Please specify the correct path to OWASP MSTG repo.")
+    for doc_path in doc_paths:
         fix_masvs_in_document(doc_path, masvs_reqs)
